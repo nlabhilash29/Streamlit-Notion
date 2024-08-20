@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import os
 from dotenv import load_dotenv
-import json
 
 # Load environment variables
 load_dotenv()
@@ -23,7 +22,7 @@ def fetch_notion_page():
         st.error("NOTION_PAGE_ID is not set. Please check your environment variables.")
         return None
 
-    url = f"https://api.notion.com/v1/pages/{PAGE_ID}"
+    url = f"https://api.notion.com/v1/blocks/{PAGE_ID}/children"
     headers = {
         "Authorization": f"Bearer {NOTION_TOKEN}",
         "Notion-Version": NOTION_API_VERSION
@@ -35,27 +34,17 @@ def fetch_notion_page():
     except requests.exceptions.HTTPError as http_err:
         st.error(f"HTTP error occurred: {http_err}")
         st.error(f"Response content: {response.text}")
-        if response.status_code == 404:
-            st.error("404 Error: Page not found. Please check if the page exists and if your integration has access to it.")
-        elif response.status_code == 401:
-            st.error("401 Error: Unauthorized. Please check if your NOTION_TOKEN is correct and has the necessary permissions.")
     except Exception as err:
         st.error(f"An error occurred: {err}")
     return None
 
 def display_page_content(page_data):
-    st.subheader("Raw Page Data")
-    st.json(page_data)
-
-    if 'properties' in page_data:
-        st.subheader("Page Properties")
-        st.json(page_data['properties'])
-
-    if 'content' in page_data:
-        st.subheader("Page Content")
-        st.json(page_data['content'])
-    else:
-        st.warning("No 'content' field found in the page data. You might need to make a separate API call to retrieve the page content.")
+    st.subheader("Page Content")
+    for block in page_data.get('results', []):
+        if block['type'] == 'paragraph':
+            text = block['paragraph']['rich_text'][0]['plain_text'] if block['paragraph']['rich_text'] else ''
+            st.write(text)
+        # Add more block types as needed
 
 if st.button("Fetch Notion Page"):
     st.write("Attempting to fetch the Notion page...")
