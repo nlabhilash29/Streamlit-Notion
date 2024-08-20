@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import os
 from dotenv import load_dotenv
+import json
 
 # Load environment variables
 load_dotenv()
@@ -9,7 +10,7 @@ load_dotenv()
 # Notion API setup
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 PAGE_ID = os.getenv("NOTION_PAGE_ID")
-NOTION_API_VERSION = "2022-06-28"  # Updated to latest version
+NOTION_API_VERSION = "2022-06-28"
 
 # Streamlit app
 st.title("Notion Page Viewer")
@@ -42,7 +43,28 @@ def fetch_notion_page():
         st.error(f"An error occurred: {err}")
     return None
 
-# Rest of your code remains the same...
+def display_page_content(page_data):
+    st.subheader("Raw Page Data")
+    st.json(page_data)
+
+    if 'properties' in page_data:
+        st.subheader("Page Properties")
+        st.json(page_data['properties'])
+
+    if 'content' in page_data:
+        st.subheader("Page Content")
+        st.json(page_data['content'])
+    else:
+        st.warning("No 'content' field found in the page data. You might need to make a separate API call to retrieve the page content.")
+
+if st.button("Fetch Notion Page"):
+    st.write("Attempting to fetch the Notion page...")
+    page_data = fetch_notion_page()
+    if page_data:
+        st.success("Successfully fetched the Notion page!")
+        display_page_content(page_data)
+    else:
+        st.error("Failed to fetch the Notion page. Check the error messages above.")
 
 # Display token and page ID (first few characters only for security)
 st.sidebar.title("Environment Variables")
