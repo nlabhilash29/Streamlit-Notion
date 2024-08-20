@@ -22,7 +22,8 @@ def fetch_notion_page():
         st.error("NOTION_PAGE_ID is not set. Please check your environment variables.")
         return None
 
-    url = f"https://api.notion.com/v1/blocks/{PAGE_ID}/children"
+    # First, fetch the page metadata
+    url = f"https://api.notion.com/v1/pages/{PAGE_ID}"
     headers = {
         "Authorization": f"Bearer {NOTION_TOKEN}",
         "Notion-Version": NOTION_API_VERSION
@@ -30,7 +31,15 @@ def fetch_notion_page():
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        return response.json()
+        page_metadata = response.json()
+
+        # Then, fetch the page content
+        content_url = f"https://api.notion.com/v1/blocks/{PAGE_ID}/children"
+        content_response = requests.get(content_url, headers=headers)
+        content_response.raise_for_status()
+        page_content = content_response.json()
+
+        return {"metadata": page_metadata, "content": page_content}
     except requests.exceptions.HTTPError as http_err:
         st.error(f"HTTP error occurred: {http_err}")
         st.error(f"Response content: {response.text}")
@@ -40,7 +49,14 @@ def fetch_notion_page():
 
 def display_page_content(page_data):
     st.subheader("Page Content")
-    for block in page_data.get('results', []):
+    
+    # Display page title from metadata
+    if 'title' in page_data['metadata']['properties']:
+        title = page_data['metadata']['properties']['title']['title'][0]['plain_text']
+        st.header(title)
+
+    # Display page content
+    for block in page_data['content'].get('results', []):
         if block['type'] == 'paragraph':
             text = block['paragraph']['rich_text'][0]['plain_text'] if block['paragraph']['rich_text'] else ''
             st.write(text)
